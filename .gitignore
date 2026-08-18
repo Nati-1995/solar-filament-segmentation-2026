@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.ipynb_checkpoints/
+data/
+test_images/
+train_images/
+weights/*.pth
+weights/*.pt
+.env
