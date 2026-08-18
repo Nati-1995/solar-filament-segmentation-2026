@@ -1,0 +1,22 @@
+# Baseline U-Net + spine head config. Tune thresholds on VALIDATION PQ.
+data:
+  ann_json: data/train/MAGFiLO_1.0_Annotations_kaggle2026_train.json
+  images_dir: data/train/train_images
+  test_dir: data/test/test_images
+train:
+  img_size: 512
+  epochs: 40
+  batch: 4
+  lr: 0.0003
+  val_frac: 0.15          # grouped by YYYYMMDD to avoid leakage
+loss:
+  w_cldice: 0.5           # centerline connectivity (barbs)
+  w_spine: 0.5            # auxiliary spine head
+postprocess:
+  fg_thr: 0.5
+  spine_thr: 0.5
+  min_area: 150
+  closing_radius: 3
+  score_thresh: 0.45
+inference:
+  tta: true               # rotational TTA (solar rotational symmetry)

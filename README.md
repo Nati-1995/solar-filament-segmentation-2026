@@ -11,8 +11,8 @@ An automated computer vision and deep learning framework for high-precision inst
    - 2D radial limb-darkening background profile correction.
    - Multi-channel representation: `[Flattened Intensity, CLAHE, Multi-Scale Frangi Vesselness]`.
 2. **Architecture:**
-   - **Mask2Former** panoptic transformer with a Swin Transformer / ConvNeXt backbone.
-   - Auxiliary spine and centerline prediction head.
+   - Baseline: compact **U-Net** with a shared encoder and two heads (filament foreground + spine/centerline). Robust on the small MAGFiLO set.
+   - Stretch: **Mask2Former** panoptic transformer (Swin / ConvNeXt), reusing the same preprocessing, dataset, loss, PQ, and instancing code.
 3. **Loss Function:**
    - Compound objective: L = L_BCE + L_Dice + lambda * L_clDice (centerline connectivity).
 4. **Post-Processing:**
@@ -30,10 +30,20 @@ cd solar-filament-segmentation-2026
 pip install -r requirements.txt
 ```
 
-### 2. Run Prediction
+### 2. Train
 ```bash
-python scripts/predict.py --input_dir /path/to/images --output_csv submission/submission.csv
+python scripts/train.py \
+  --ann_json data/train/MAGFiLO_1.0_Annotations_kaggle2026_train.json \
+  --images_dir data/train/train_images
 ```
+Checkpoints are selected on **validation Panoptic Quality** (grouped by day to avoid leakage), saved to `weights/unet_spine.pth`.
+
+### 3. Predict (writes RLE submission)
+```bash
+python scripts/predict.py --input_dir data/test/test_images --output_csv submission/submission.csv
+```
+
+> **Weights & reproducibility:** `.gitignore` excludes `weights/*.pth`. Attach the trained weights to a GitHub **Release** (or git-lfs) so the committee can reproduce predictions without extra files, as the rules require.
 
 ---
 
@@ -41,16 +51,22 @@ python scripts/predict.py --input_dir /path/to/images --output_csv submission/su
 ```
 solar-filament-segmentation-2026/
 ├── configs/
+│   └── baseline.yaml
 ├── notebooks/
+│   └── pipeline.ipynb        # full pipeline walkthrough (required deliverable)
 ├── src/
-│   ├── models/
-│   │   └── losses.py
-│   ├── preprocessing.py
-│   ├── postprocessing.py
-│   └── utils_rle.py
+│   ├── preprocessing.py      # limb detect, flatten, CLAHE, Frangi -> 3ch
+│   ├── dataset.py            # MAGFiLO COCO loader, multi-annotator pooling
+│   ├── instancing.py         # spine-guided watershed: semantic -> instances
+│   ├── metrics.py            # Panoptic Quality (SQ x RQ)
+│   ├── postprocessing.py     # closing, min-area, IoU-NMS
+│   ├── utils_rle.py          # masks -> pycocotools RLE submission
+│   └── models/
+│       ├── unet.py           # U-Net + spine head
+│       └── losses.py         # BCE + Dice + clDice, combined loss
 ├── scripts/
-│   └── predict.py
-├── submission/
+│   ├── train.py              # grouped split, PQ-based checkpointing
+│   └── predict.py            # inference + rotational TTA -> submission.csv
 ├── weights/
 ├── requirements.txt
 └── README.md
